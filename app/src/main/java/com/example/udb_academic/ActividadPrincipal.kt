@@ -174,4 +174,33 @@ class ActividadPrincipal : AppCompatActivity() {
         aviso("Guardando archivo en el teléfono…")
         datos.guardarAdjuntoLocal(apunte.id, uri, nombre, tipo) { aviso("Adjunto guardado en este dispositivo.") }
     }
+    /** Solicita permiso y muestra un recordatorio local de ejemplo sin usar un servidor. */
+    private fun probarRecordatorio() {
+        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            probarAlDarPermiso = true
+            permisoNotificaciones.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else if (Recordatorios.probar(this)) aviso("Recordatorio de prueba enviado al teléfono.")
+        else aviso("Activá las notificaciones de UDB Academic en los ajustes del teléfono.", true)
+    }
+
+    /** Muestra noticias y eventos publicados desde la consola de Firebase. */
+    private fun mostrarNoticias(datos: RepositorioAcademico) {
+        texto(contenido, "Noticias y eventos", 27f, azul, true)
+        texto(contenido, "Información académica publicada para la comunidad.")
+        if (datos.noticias.isEmpty()) vacio("No hay publicaciones todavía", "Las noticias aparecerán cuando el administrador las publique.")
+        datos.noticias.forEach { noticia -> tarjeta { panel ->
+            texto(panel, noticia.categoria.uppercase(), 11f, dorado, true)
+            texto(panel, noticia.titulo, 22f, azul, true)
+            texto(panel, formatoFecha.format(Date(noticia.fecha)), 12f)
+            texto(panel, noticia.descripcion)
+            if (noticia.enlace.startsWith("https://")) boton(panel, "Ver información", true) { abrirEnlace(noticia.enlace) }
+        } }
+    }
+
+    /** Abre enlaces seguros o el cliente de correo del dispositivo. */
+    private fun abrirEnlace(enlace: String) {
+        if (!enlace.startsWith("https://") && !enlace.startsWith("mailto:")) return
+        try { startActivity(Intent(if (enlace.startsWith("mailto:")) Intent.ACTION_SENDTO else Intent.ACTION_VIEW, Uri.parse(enlace))) }
+        catch (_: android.content.ActivityNotFoundException) { aviso("No hay una aplicación disponible para abrir este enlace.", true) }
+    }
 }
